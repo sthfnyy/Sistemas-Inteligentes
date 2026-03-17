@@ -1,0 +1,31 @@
+1. Buscar uma biblioteca que desenhe pontos e triagulos e mostre um grafico ao executar o codigo
+    R. import matplotlib.pyplot as plt 
+
+2. Entender como desenhar pontos com legenda (ponto inicial ponto final)
+
+3. Entender como desenhar os triagulos de forma que possa apenas informar 1 largura (que sera replicada para o restante do triangulo) e a posição dos pontos
+
+4. Criar a regra de colisão
+    4.1. As retas formadas pelos pontos não podem se cruzar com as retas de um triangulo já existente
+    4.2. Os pontos não podem já pertencer a um triangulo existente
+    4.3. Se as regras foram atendias, salvar o triagulo na lista
+
+5. Informar o ponto Inicial e Final (X,y)
+
+5. Criar uma função que recebe o valor da largura dos laods do triangulo e a quanidade de triagulos. (Scanf)
+
+6. Desenhar todos os triagulos e pontos gerados.
+
+explicar melhor doq se trata o trabalho.
+meu trabalho é, gerar um mapa de grafo, que:
+ponto inicial é 0,0 e o ponto final o usuário define, esse sera definição do tamanho do mapa de grafo, dentro dele, 
+vai se perguntar ao usuário quantos obstaculos serão gerados, esses obstaculos são triangulos isoceles, que o usuário
+vai definir um tamanho para todos eles, esse grafo tem uma regra, os triangulos não podem colidir. 
+esse grafo, como tem entrada inicial e final definindo tamanho, quero que eles sejam um plano cartesiano. 
+
+1 receber destino (x,y)
+2 gerar plano cartesiano
+3 perguntar numero de triangulos
+4 gerar triangulos
+5 verificar colisão
+6 desenhar mapa
