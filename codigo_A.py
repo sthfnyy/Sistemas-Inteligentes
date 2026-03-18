@@ -2,7 +2,6 @@ import random
 import matplotlib.pyplot as plt
 from shapely.geometry import Polygon, Point
 
-
 def criar_triangulo_isosceles(x_base, y_base, tamanho):
     """
     Cria um triângulo isósceles com base horizontal.
@@ -90,9 +89,6 @@ def desenhar_mapa(largura, altura, inicio, fim, obstaculos):
         ax.fill(x, y, alpha=0.5)
         ax.plot(x, y)
 
-        # Marca centro aproximado do triângulo
-        centro = triangulo.centroid
-        ax.text(centro.x, centro.y, f"T{i}", fontsize=9, ha="center")
 
     # Desenha início e fim
     ax.scatter(inicio[0], inicio[1], s=100, label="Início")
@@ -139,7 +135,7 @@ def main():
         return
 
     # Tamanho dos triângulos
-    tamanho_triangulo = float(input("Digite o tamanho dos triângulos isósceles: "))
+    tamanho_triangulo = float(input("Digite o tamanho dos triangulos isósceles: "))
     if tamanho_triangulo <= 0:
         print("Erro: o tamanho do triângulo deve ser maior que zero.")
         return
