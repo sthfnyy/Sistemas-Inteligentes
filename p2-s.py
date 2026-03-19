@@ -5,6 +5,7 @@ from shapely.geometry import Polygon, Point
 # --------------------------
 # CRIA TRIÂNGULO
 # --------------------------
+
 def criar_triangulo_isosceles(x_base, y_base, tamanho):
     a = (x_base, y_base)
     b = (x_base + tamanho, y_base)
@@ -13,27 +14,25 @@ def criar_triangulo_isosceles(x_base, y_base, tamanho):
 
 
 # --------------------------
-# VERIFICA SE ESTA DENTRO DO MAPA
+# DENTRO DO MAPA
 # --------------------------
+
 def triangulo_dentro_do_mapa(triangulo, largura, altura):
-    coords = list(triangulo.exterior.coords) # Pega as coordenadas dos vértices do triângulo
-    for x, y in coords: # percorre cada ponto do triângulo
-        if x < 0 or x > largura or y < 0 or y > altura: #Verifica se o ponto está fora do mapa
-            return False #triângulo inválido (fora do mapa)
+    coords = list(triangulo.exterior.coords)
+    for x, y in coords:
+        if x < 0 or x > largura or y < 0 or y > altura:
+            return False
     return True
 
 
 # --------------------------
 # GEOMETRIA SIMPLES
 # --------------------------
-# a função verifica se ouve uma curva, para cima (o resultado deu negativo), para baixo (resultado deu positivo) ou seguiu reto (resultado = 0)
+
 def orientacao(ponto_a, ponto_b, ponto_c):
     return (ponto_b[1] - ponto_a[1]) * (ponto_c[0] - ponto_b[0]) - (ponto_b[0] - ponto_a[0]) * (ponto_c[1] - ponto_b[1])
-# resumo: verifica e se o topo do triangulo esta para baixo ou para cima
 
 
-#Calcula orientação cruzada: D e E em relação à linha AB, A e B em relação à linha DE
-#se os sinais são diferentes se cruzam
 def segmentos_intersectam(inicio_1, fim_1, inicio_2, fim_2):
     orientacao_1 = orientacao(inicio_1, fim_1, inicio_2)
     orientacao_2 = orientacao(inicio_1, fim_1, fim_2)
@@ -41,28 +40,25 @@ def segmentos_intersectam(inicio_1, fim_1, inicio_2, fim_2):
     orientacao_4 = orientacao(inicio_2, fim_2, fim_1)
 
     return (orientacao_1 * orientacao_2 < 0) and (orientacao_3 * orientacao_4 < 0)
-#resumo: verifica se as arestas se cruzam
 
-# retorna as 3 arestas:
+
 def arestas(triangulo):
-    coordenadas = list(triangulo.exterior.coords)[:-1] # pega os pontos do triangulo
-    ponto_a, ponto_b, ponto_c = coordenadas # Desempacota os pontos
-    return [ (ponto_a, ponto_b), (ponto_b, ponto_c), (ponto_c, ponto_a) ] # cria as 3 arestas do triângulo:
+    coordenadas = list(triangulo.exterior.coords)[:-1]
+    ponto_a, ponto_b, ponto_c = coordenadas
+    return [ (ponto_a, ponto_b), (ponto_b, ponto_c), (ponto_c, ponto_a) ]
 
-#verifica se algum lado do triangulo cruza com as arestas
+
 def triangulos_colidem(triangulo_1, triangulo_2):
-    # compara as arestas dos dois triangulos
+    # 1. cruzamento de arestas
     for aresta_1 in arestas(triangulo_1):
         for aresta_2 in arestas(triangulo_2):
-            #chama a função para comparar se duas arestas se cruzam
             if segmentos_intersectam( aresta_1[0], aresta_1[1], aresta_2[0], aresta_2[1] ):
-                return True #colide
+                return True
 
-    # pega um vértice de cada triângulo
+    # 2. encostar ou estar dentro
     ponto_t1 = Point(list(triangulo_1.exterior.coords)[0])
     ponto_t2 = Point(list(triangulo_2.exterior.coords)[0])
 
-    #verifica se o triangulo esta dentro do outro
     if triangulo_1.contains(ponto_t2) or triangulo_1.touches(ponto_t2):
         return True
 
@@ -71,10 +67,10 @@ def triangulos_colidem(triangulo_1, triangulo_2):
 
     return False
 
-
 # --------------------------
 # VALIDAÇÃO
 # --------------------------
+
 def triangulo_valido(novo_triangulo, obstaculos, inicio, fim):
     ponto_inicio = Point(inicio)
     ponto_fim = Point(fim)
@@ -91,13 +87,13 @@ def triangulo_valido(novo_triangulo, obstaculos, inicio, fim):
         if triangulos_colidem(novo_triangulo, obstaculo):
             return False
 
-    return True # adiciona
+    return True
 
 
 # --------------------------
 # GERAR OBSTÁCULOS
 # --------------------------
-# gera uma posição aleatoria 
+
 def gerar_obstaculos(quantidade, tamanho, largura, altura, inicio, fim, max_tentativas=5000):
     obstaculos = []
     tentativas = 0
@@ -105,22 +101,18 @@ def gerar_obstaculos(quantidade, tamanho, largura, altura, inicio, fim, max_tent
     while len(obstaculos) < quantidade and tentativas < max_tentativas:
         tentativas += 1
 
-        #gera uma posição aleatoria 
         x_base = random.uniform(0, largura - tamanho)
         y_base = random.uniform(0, altura - tamanho)
 
-        #Criar o triângulo
         novo_triangulo = criar_triangulo_isosceles(x_base, y_base, tamanho)
 
-        #Verificar se está dentro do mapa
         if not triangulo_dentro_do_mapa(novo_triangulo, largura, altura):
             continue
+
         if triangulo_valido(novo_triangulo, obstaculos, inicio, fim):
             obstaculos.append(novo_triangulo)
 
     return obstaculos
-
-
 
 
 # --------------------------
@@ -154,8 +146,6 @@ def desenhar_mapa(largura, altura, inicio, fim, obstaculos):
     plt.show()
 
 
-
-
 # --------------------------
 # MAIN
 # --------------------------
@@ -183,12 +173,6 @@ def main():
     obstaculos = gerar_obstaculos( quantidade_obstaculos, tamanho_triangulo, largura, altura, inicio, fim )
 
     desenhar_mapa(largura, altura, inicio, fim, obstaculos)
-    
-    pontos = obter_pontos_do_mapa(obstaculos, inicio, fim)
-    arestas_validas = gerar_arestas_validas(pontos, obstaculos)
-    caminhos = encontrar_caminhos(inicio, fim, arestas_validas)
-
-    desenhar_caminhos(largura, altura, inicio, fim, obstaculos, caminhos)
 
 
 if __name__ == "__main__":
