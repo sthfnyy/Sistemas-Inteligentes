@@ -2,39 +2,39 @@ import math
 import random
 import matplotlib.pyplot as plt
 
-# configurações
-lado = 4
-quantidade = 100
+# entradas do triangulo
+tamanho_triangulo = 10
+quantidade = 100# 1588
 
-# plano cartesiano fixo
-largura = 30
-altura_plano = 30
+# plano cartesiano
+largura = 500
+altura_plano = 500
 
-# limite de tentativas por triângulo
+# limite de tentativas por triângulo 
 max_tentativas = 100
 
 triangulos = []
 
-def distancia_ponto_segmento(P, A, B):
-    # vetor AB
-    ABx = B[0] - A[0]
-    ABy = B[1] - A[1]
+def distancia_ponto_segmento(P, inicio, fim):
+    # vetor do segmento
+    seg_x = fim[0] - inicio[0]
+    seg_y = fim[1] - inicio[1]
 
-    # vetor AP
-    APx = P[0] - A[0]
-    APy = P[1] - A[1]
+    # vetor do ponto
+    ponto_x = P[0] - A[0]
+    ponto_y = P[1] - A[1]
 
-    # projeção
-    t = (APx*ABx + APy*ABy) / (ABx*ABx + ABy*ABy)
+    # posição no segimento
+    t = (ponto_x * seg_x + ponto_y * seg_y) / (seg_x * seg_x + seg_y * seg_y)
 
     t = max(0, min(1, t))
 
     # ponto mais próximo
-    Px = A[0] + t * ABx
-    Py = A[1] + t * ABy
+    P_prox_x = inicio[0] + t * seg_x
+    P_prox_y = inicio[1] + t * seg_y
 
-    dx = P[0] - Px
-    dy = P[1] - Py
+    dx = P[0] - P_prox_x
+    dy = P[1] - P_prox_y
 
     return math.sqrt(dx*dx + dy*dy)
 
@@ -65,7 +65,7 @@ def arestas(triangulo):
     A, B, C = triangulo
     return [(A,B), (B,C), (C,A)]
 
-dist_min = 0.5  # margem mínima (ajuste se quiser)
+dist_min = 0.5  # margem mínima 
 
 def colide(t1, t2):
     for a1 in arestas(t1):
@@ -75,14 +75,14 @@ def colide(t1, t2):
             if intersecta(a1[0], a1[1], a2[0], a2[1]):
                 return True
 
-            # 2. proximidade (evita encostar)
+            # 2. proximidade
             if distancia_segmentos(a1[0], a1[1], a2[0], a2[1]) < dist_min:
                 return True
 
     return False
 
 # --------------------------
-# GERADOR DE TRIÂNGULOS
+# GERAR TRINAGULO
 # --------------------------
 
 for _ in range(quantidade):
@@ -94,14 +94,14 @@ for _ in range(quantidade):
         tentativas += 1
 
         # garante que o triângulo fique dentro do plano
-        x = random.randint(0, largura - lado)
-        y = random.randint(0, altura_plano - int((math.sqrt(3)/2)*lado))
+        x = random.randint(0, largura - tamanho_triangulo)
+        y = random.randint(0, altura_plano - int((math.sqrt(3)/2)*tamanho_triangulo))
 
-        altura = (math.sqrt(3)/2) * lado
+        altura = (math.sqrt(3)/2) * tamanho_triangulo
 
         A = (x, y)
-        B = (x + lado, y)
-        C = (x + lado/2, y + altura)
+        B = (x + tamanho_triangulo, y)
+        C = (x + tamanho_triangulo/2, y + altura)
 
         novo = (A,B,C)
 
