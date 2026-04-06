@@ -17,12 +17,12 @@ def criar_triangulo_isosceles(x_base, y_base, tamanho):
 def obter_vertices_triangulo(triangulo):
     return list(triangulo.exterior.coords)[:-1]
 
-
+# Monta as 3 arestas do triângulo.
 def obter_arestas_triangulo(triangulo):
     v = obter_vertices_triangulo(triangulo)
     return [(v[0], v[1]), (v[1], v[2]), (v[2], v[0])]
 
-
+# Verifica se o triângulo está totalmente dentro do mapa.
 def triangulo_dentro_do_mapa(triangulo, largura, altura):
     for x, y in triangulo.exterior.coords:
         if x < 0 or x > largura or y < 0 or y > altura:
