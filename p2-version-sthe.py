@@ -1,54 +1,152 @@
 import math
 import random
 from collections import deque
-from matplotlib import pyplot as plt
-from shapely.geometry import Polygon, Point, LineString
+import matplotlib.pyplot as plt
 
 
 # ==========================================================
-# GEOMETRIA
+# FUNCOES BASICAS DE GEOMETRIA
 # ==========================================================
+
+def distancia_entre_pontos(p1, p2):
+    dx = p2[0] - p1[0]
+    dy = p2[1] - p1[1]
+    return math.sqrt(dx * dx + dy * dy)
+
+
+def orientacao(p, q, r):
+    valor = (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1])
+
+    if valor == 0:
+        return 0
+    elif valor > 0:
+        return 1
+    else:
+        return 2
+
+
+def ponto_no_segmento(p, q, r):
+    if (
+        min(p[0], r[0]) <= q[0] <= max(p[0], r[0]) and
+        min(p[1], r[1]) <= q[1] <= max(p[1], r[1])
+    ):
+        return True
+    return False
+
+
+def segmentos_se_intersectam(p1, q1, p2, q2):
+    o1 = orientacao(p1, q1, p2)
+    o2 = orientacao(p1, q1, q2)
+    o3 = orientacao(p2, q2, p1)
+    o4 = orientacao(p2, q2, q1)
+
+    if o1 != o2 and o3 != o4:
+        return True
+
+    if o1 == 0 and ponto_no_segmento(p1, p2, q1):
+        return True
+
+    if o2 == 0 and ponto_no_segmento(p1, q2, q1):
+        return True
+
+    if o3 == 0 and ponto_no_segmento(p2, p1, q2):
+        return True
+
+    if o4 == 0 and ponto_no_segmento(p2, q1, q2):
+        return True
+
+    return False
+
+
+def area_triangulo(a, b, c):
+    return abs(
+        a[0] * (b[1] - c[1]) +
+        b[0] * (c[1] - a[1]) +
+        c[0] * (a[1] - b[1])
+    ) / 2.0
+
+
+def ponto_dentro_ou_borda_triangulo(ponto, triangulo):
+    a, b, c = triangulo
+
+    area_total = area_triangulo(a, b, c)
+    area1 = area_triangulo(ponto, b, c)
+    area2 = area_triangulo(a, ponto, c)
+    area3 = area_triangulo(a, b, ponto)
+
+    soma = area1 + area2 + area3
+
+    if abs(soma - area_total) < 1e-9:
+        return True
+
+    return False
+
+
+def ponto_igual(p1, p2, tolerancia=1e-9):
+    return abs(p1[0] - p2[0]) < tolerancia and abs(p1[1] - p2[1]) < tolerancia
+
+
+# ==========================================================
+# FUNCOES DO TRIANGULO
+# ==========================================================
+
 def criar_triangulo_isosceles(x_base, y_base, tamanho):
     a = (x_base, y_base)
     b = (x_base + tamanho, y_base)
     c = (x_base + tamanho / 2, y_base + tamanho)
-    return Polygon([a, b, c])
+    return (a, b, c)
 
 
 def obter_vertices_triangulo(triangulo):
-    return list(triangulo.exterior.coords)[:-1]
+    a, b, c = triangulo
+    return [a, b, c]
 
 
 def obter_arestas_triangulo(triangulo):
-    v = obter_vertices_triangulo(triangulo)
-    return [(v[0], v[1]), (v[1], v[2]), (v[2], v[0])]
+    a, b, c = triangulo
+    return [(a, b), (b, c), (c, a)]
 
 
 def triangulo_dentro_do_mapa(triangulo, largura, altura):
-    for x, y in triangulo.exterior.coords:
+    for x, y in triangulo:
         if x < 0 or x > largura or y < 0 or y > altura:
             return False
     return True
 
 
-#def ponto_em_triangulo_ou_borda(triangulo, ponto):
-   # p = Point(ponto)
-  #  return triangulo.contains(p) or triangulo.touches(p)
-
-
 def triangulos_colidem_ou_tocam(t1, t2):
-    return t1.intersects(t2) #gerar o código matematico e chamar a função 
+    arestas_t1 = obter_arestas_triangulo(t1)
+    arestas_t2 = obter_arestas_triangulo(t2)
+
+    # verifica se alguma aresta de um triangulo intersecta uma aresta do outro
+    for a1_inicio, a1_fim in arestas_t1:
+        for a2_inicio, a2_fim in arestas_t2:
+            if segmentos_se_intersectam(a1_inicio, a1_fim, a2_inicio, a2_fim):
+                return True
+
+    # verifica se algum vertice de t1 esta dentro ou na borda de t2
+    for ponto in t1:
+        if ponto_dentro_ou_borda_triangulo(ponto, t2):
+            return True
+
+    # verifica se algum vertice de t2 esta dentro ou na borda de t1
+    for ponto in t2:
+        if ponto_dentro_ou_borda_triangulo(ponto, t1):
+            return True
+
+    return False
 
 
 # ==========================================================
-# GERAÇÃO DOS OBSTÁCULOS
+# GERACAO DOS OBSTACULOS
 # ==========================================================
+
 def triangulo_valido(novo_triangulo, obstaculos, inicio, fim):
-    #if ponto_em_triangulo_ou_borda(novo_triangulo, inicio):
-    #    return False
+    if ponto_dentro_ou_borda_triangulo(inicio, novo_triangulo):
+        return False
 
-  #  if ponto_em_triangulo_ou_borda(novo_triangulo, fim):
-   #     return False
+    if ponto_dentro_ou_borda_triangulo(fim, novo_triangulo):
+        return False
 
     for obstaculo in obstaculos:
         if triangulos_colidem_ou_tocam(novo_triangulo, obstaculo):
@@ -81,68 +179,87 @@ def gerar_obstaculos(quantidade, tamanho, largura, altura, inicio, fim, max_tent
 # ==========================================================
 # PONTOS DO GRAFO
 # ==========================================================
+
 def obter_pontos_do_mapa(obstaculos, inicio, fim):
     pontos = [inicio, fim]
 
     for triangulo in obstaculos:
-        pontos.extend(obter_vertices_triangulo(triangulo)) #fez uma varredura pegando todos gerados pertencentes aos triangulos
+        vertices = obter_vertices_triangulo(triangulo)
+        for vertice in vertices:
+            pontos.append(vertice)
 
-    ponto_unicos = [] #lista para armazenar os pontos únicos
-    for p in pontos:#verificar se o pontos já foi adicionado para evitar duplicatas
-        if p not in ponto_unicos: #verificar se o pontos já foi adicionado para evitar duplicatas
-            ponto_unicos.append(p)
+    pontos_unicos = []
+    for p in pontos:
+        existe = False
+        for ponto_salvo in pontos_unicos:
+            if ponto_igual(p, ponto_salvo):
+                existe = True
+                break
 
-    return ponto_unicos#retorna a lista de pontos únicos
+        if not existe:
+            pontos_unicos.append(p)
+
+    return pontos_unicos
 
 
 # ==========================================================
-# VALIDAÇÃO DE ARESTA
+# VALIDACAO DE ARESTA
 # ==========================================================
+
 def mesmo_segmento(a1, a2, b1, b2):
-    return {a1, a2} == {b1, b2}
+    return (
+        (ponto_igual(a1, b1) and ponto_igual(a2, b2)) or
+        (ponto_igual(a1, b2) and ponto_igual(a2, b1))
+    )
 
 
-def ponto_eh_extremidade(point_geom, A, B, tol=1e-9):
-    return point_geom.distance(Point(A)) < tol or point_geom.distance(Point(B)) < tol
+def intersecao_apenas_nas_extremidades(A, B, U, V):
+    pontos_em_comum = 0
 
+    if ponto_igual(A, U) or ponto_igual(A, V):
+        pontos_em_comum += 1
 
-def intersecao_permitida(intersecao, A, B):
-    if intersecao.is_empty:
+    if ponto_igual(B, U) or ponto_igual(B, V):
+        pontos_em_comum += 1
+
+    if pontos_em_comum > 0:
         return True
 
-    if intersecao.geom_type == "Point":
-        return ponto_eh_extremidade(intersecao, A, B)
+    return False
 
-    if intersecao.geom_type == "MultiPoint":
-        return all(ponto_eh_extremidade(g, A, B) for g in intersecao.geoms)
+
+def segmento_passa_dentro_do_triangulo(A, B, triangulo):
+    # verifica se o ponto medio do segmento fica dentro do triangulo
+    ponto_medio = ((A[0] + B[0]) / 2, (A[1] + B[1]) / 2)
+
+    if ponto_dentro_ou_borda_triangulo(ponto_medio, triangulo):
+        # se o ponto medio estiver exatamente numa aresta, ainda pode ser valido em alguns casos,
+        # mas para deixar a regra mais simples e segura, vamos considerar invalido
+        return True
 
     return False
 
 
 def segmento_valido(A, B, obstaculos):
-    if A == B:
+    if ponto_igual(A, B):
         return False
-
-    segmento = LineString([A, B])
 
     for triangulo in obstaculos:
         arestas = obter_arestas_triangulo(triangulo)
 
-    # TODO deixar em uma linguagem mais iniciante: para cada triangulo, pega as arestas do triangulo e compara com o segmento que queremos criar
+        # se for exatamente uma aresta do triangulo, pode
+        for U, V in arestas:
+            if mesmo_segmento(A, B, U, V):
+                return True
 
+        # verifica se cruza alguma aresta do triangulo em lugar proibido
+        for U, V in arestas:
+            if segmentos_se_intersectam(A, B, U, V):
+                if not intersecao_apenas_nas_extremidades(A, B, U, V):
+                    return False
 
-        # Se for exatamente uma aresta do triângulo, pode
-        #verificar
-        # if any(mesmo_segmento(A, B, U, V) for U, V in arestas):
-        #     continue
-
-        # Não pode passar pelo interior
-        if segmento.crosses(triangulo) or segmento.within(triangulo):
-            return False
-
-        intersecao = segmento.intersection(triangulo)
-
-        if not intersecao_permitida(intersecao, A, B):
+        # verifica se o segmento passa por dentro do triangulo
+        if segmento_passa_dentro_do_triangulo(A, B, triangulo):
             return False
 
     return True
@@ -151,32 +268,41 @@ def segmento_valido(A, B, obstaculos):
 # ==========================================================
 # GRAFO
 # ==========================================================
+
 def gerar_arestas_validas(pontos, obstaculos):
     arestas_validas = []
 
+    # adiciona as arestas dos triangulos
     for triangulo in obstaculos:
         arestas = obter_arestas_triangulo(triangulo)
         for U, V in arestas:
             arestas_validas.append((U, V))
-        #print("Arestas do triangulo:", arestas)
-        #arestas_validas.extend(arestas)
-    print("arestas_validas:",arestas_validas)
 
+    # testa ligacao entre todos os pontos do mapa
     for i in range(len(pontos)):
         for j in range(i + 1, len(pontos)):
             A = pontos[i]
             B = pontos[j]
 
             if segmento_valido(A, B, obstaculos):
-                arestas_validas.append((A, B))
+                ja_existe = False
 
-    print("arestas_validas 2:",arestas_validas)
+                for X, Y in arestas_validas:
+                    if mesmo_segmento(A, B, X, Y):
+                        ja_existe = True
+                        break
+
+                if not ja_existe:
+                    arestas_validas.append((A, B))
 
     return arestas_validas
 
 
 def gerar_grafo_adjacencia(pontos, arestas_validas):
-    grafo = {p: [] for p in pontos}
+    grafo = {}
+
+    for p in pontos:
+        grafo[p] = []
 
     for A, B in arestas_validas:
         grafo[A].append(B)
@@ -188,63 +314,80 @@ def gerar_grafo_adjacencia(pontos, arestas_validas):
 # ==========================================================
 # BFS
 # ==========================================================
+
 def bfs_caminho(grafo, inicio, fim):
-    fila = deque([[inicio]])
-    visitados = {inicio}
-#TODO deixar em uma linguagem mais iniciante: criar uma fila para armazenar os caminhos a serem explorados e um conjunto para marcar os pontos já visitados
-    while fila:
-        caminho = fila.popleft()
-        atual = caminho[-1]
+    fila = deque()
+    fila.append([inicio])
 
-        if atual == fim:
-            return caminho
+    visitados = set()
+    visitados.add(inicio)
 
-        for vizinho in grafo[atual]:
+    while len(fila) > 0:
+        caminho_atual = fila.popleft()
+        ponto_atual = caminho_atual[-1]
+
+        if ponto_atual == fim:
+            return caminho_atual
+
+        vizinhos = grafo[ponto_atual]
+
+        for vizinho in vizinhos:
             if vizinho not in visitados:
                 visitados.add(vizinho)
-                fila.append(caminho + [vizinho])
+
+                novo_caminho = caminho_atual + [vizinho]
+                fila.append(novo_caminho)
 
     return None
 
 
 def comprimento_caminho(caminho):
-    if not caminho or len(caminho) < 2:
+    if caminho is None or len(caminho) < 2:
         return 0.0
 
     total = 0.0
+
     for i in range(len(caminho) - 1):
-        total += math.dist(caminho[i], caminho[i + 1])
+        total += distancia_entre_pontos(caminho[i], caminho[i + 1])
+
     return total
 
 
 # ==========================================================
 # DESENHO
 # ==========================================================
+
 def desenhar_mapa(largura, altura, inicio, fim, obstaculos, arestas_validas, caminho=None):
     fig, ax = plt.subplots(figsize=(10, 7))
 
-    # Triângulos coloridos
+    # desenha os triangulos
     for triangulo in obstaculos:
-        x, y = triangulo.exterior.xy
-        ax.fill(x, y, alpha=0.4)
-        ax.plot(x, y)
+        a, b, c = triangulo
+        xs = [a[0], b[0], c[0], a[0]]
+        ys = [a[1], b[1], c[1], a[1]]
 
-    # Arestas do grafo
+        ax.fill(xs, ys, alpha=0.4)
+        ax.plot(xs, ys)
+
+    # desenha as arestas do grafo
     for A, B in arestas_validas:
         ax.plot([A[0], B[0]], [A[1], B[1]], color="blue", alpha=1.0)
 
-    # Caminho BFS destacado
-    if caminho and len(caminho) > 1:
+    # desenha o caminho encontrado
+    if caminho is not None and len(caminho) > 1:
         for i in range(len(caminho) - 1):
             A = caminho[i]
             B = caminho[i + 1]
+
             ax.plot(
-                [A[0], B[0]], [A[1], B[1]],
-                color="red", linewidth=3,
+                [A[0], B[0]],
+                [A[1], B[1]],
+                color="red",
+                linewidth=3,
                 label="Caminho BFS" if i == 0 else None
             )
 
-    # Início e fim
+    # desenha inicio e fim
     ax.scatter(inicio[0], inicio[1], s=100, label="Inicio")
     ax.scatter(fim[0], fim[1], s=100, label="Fim")
 
@@ -262,27 +405,31 @@ def desenhar_mapa(largura, altura, inicio, fim, obstaculos, arestas_validas, cam
 # ==========================================================
 # ENTRADA
 # ==========================================================
+
 def ler_float_positivo(mensagem):
     while True:
         try:
             valor = float(input(mensagem))
+
             if valor <= 0:
                 print("Erro: digite um valor positivo.")
-                continue
-            return valor
+            else:
+                return valor
+
         except ValueError:
             print("Erro: digite um numero valido.")
 
 
-#TODO bota na main
 def ler_int_positivo_ou_zero(mensagem):
     while True:
         try:
             valor = int(input(mensagem))
+
             if valor < 0:
                 print("Erro: digite um inteiro maior ou igual a zero.")
-                continue
-            return valor
+            else:
+                return valor
+
         except ValueError:
             print("Erro: digite um numero inteiro valido.")
 
@@ -290,6 +437,7 @@ def ler_int_positivo_ou_zero(mensagem):
 # ==========================================================
 # MAIN
 # ==========================================================
+
 def main():
     print("=== Geracao de mapa ===")
 
@@ -309,10 +457,17 @@ def main():
         print("Erro: o tamanho do triangulo eh maior que o mapa.")
         return
 
-    obstaculos = gerar_obstaculos(quantidade_obstaculos, tamanho_triangulo, largura, altura, inicio, fim)
+    obstaculos = gerar_obstaculos(
+        quantidade_obstaculos,
+        tamanho_triangulo,
+        largura,
+        altura,
+        inicio,
+        fim
+    )
 
     if len(obstaculos) < quantidade_obstaculos:
-        print(f"So foi possível gerar {len(obstaculos)} de {quantidade_obstaculos} obstaculos.")
+        print("So foi possivel gerar", len(obstaculos), "de", quantidade_obstaculos, "obstaculos.")
 
     pontos = obter_pontos_do_mapa(obstaculos, inicio, fim)
     arestas_validas = gerar_arestas_validas(pontos, obstaculos)
@@ -320,15 +475,16 @@ def main():
     caminho = bfs_caminho(grafo, inicio, fim)
 
     print("\n=== RESULTADO ===")
-    print(f"Obstaculos gerados: {len(obstaculos)}")
-    print(f"Pontos do grafo: {len(pontos)}")
-    print(f"Arestas validas: {len(arestas_validas)}")
+    print("Obstaculos gerados:", len(obstaculos))
+    print("Pontos do grafo:", len(pontos))
+    print("Arestas validas:", len(arestas_validas))
 
-    if caminho:
+    if caminho is not None:
         print("Caminho encontrado (BFS):")
         for p in caminho:
             print(p)
-        print(f"Comprimento total do caminho: {comprimento_caminho(caminho):.2f}")
+
+        print("Comprimento total do caminho:", round(comprimento_caminho(caminho), 2))
     else:
         print("Nenhum caminho encontrado.")
 
